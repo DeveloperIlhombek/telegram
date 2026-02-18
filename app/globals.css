@@ -1,0 +1,374 @@
+@import "tailwindcss";
+
+/* ============================================
+   Telegram Theme Variables (defaults - overridden by JS)
+   ============================================ */
+:root {
+  /* Telegram Theme Colors */
+  --tg-bg: #ffffff;
+  --tg-text: #000000;
+  --tg-hint: #999999;
+  --tg-link: #2481cc;
+  --tg-button: #2481cc;
+  --tg-button-text: #ffffff;
+  --tg-secondary-bg: #f1f1f1;
+  --tg-header-bg: #527da3;
+  --tg-bottom-bar-bg: #ffffff;
+  --tg-accent: #2481cc;
+  --tg-section-bg: #ffffff;
+  --tg-section-header: #6d6d71;
+  --tg-subtitle: #999999;
+  --tg-destructive: #cc2929;
+
+  /* App-specific */
+  --status-present: #34c759;
+  --status-absent: #ff3b30;
+  --status-late: #ff9500;
+
+  /* Safe areas for iOS */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+/* Dark theme overrides */
+[data-tg-theme="dark"] {
+  --tg-bg: #212121;
+  --tg-text: #ffffff;
+  --tg-hint: #aaaaaa;
+  --tg-link: #6ab3f3;
+  --tg-button: #5288c1;
+  --tg-button-text: #ffffff;
+  --tg-secondary-bg: #181818;
+  --tg-header-bg: #242f3d;
+  --tg-bottom-bar-bg: #212121;
+  --tg-accent: #6ab3f3;
+  --tg-section-bg: #212121;
+  --tg-section-header: #aaaaaa;
+  --tg-subtitle: #aaaaaa;
+  --tg-destructive: #ec3942;
+}
+
+/* ============================================
+   Base Reset
+   ============================================ */
+* {
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+  overflow: hidden;
+  font-size: 16px;
+}
+
+body {
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--tg-secondary-bg);
+  color: var(--tg-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+  user-select: none;
+}
+
+#__next,
+#root {
+  height: 100%;
+}
+
+/* ============================================
+   Scrollable areas
+   ============================================ */
+.scroll-area {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* ============================================
+   TG-style components
+   ============================================ */
+
+/* Section card - Telegram list style */
+.tg-section {
+  background-color: var(--tg-section-bg);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.tg-section-header {
+  font-size: 13px;
+  color: var(--tg-section-header);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0 16px 8px;
+  font-weight: 400;
+}
+
+/* List item */
+.tg-list-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: var(--tg-section-bg);
+  border-bottom: 0.5px solid var(--tg-secondary-bg);
+  transition: opacity 0.15s ease;
+  gap: 12px;
+}
+
+.tg-list-item:last-child {
+  border-bottom: none;
+}
+
+.tg-list-item:active {
+  opacity: 0.7;
+}
+
+/* Telegram-style button */
+.tg-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--tg-button);
+  color: var(--tg-button-text);
+  border: none;
+  border-radius: 12px;
+  padding: 14px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+  width: 100%;
+  letter-spacing: 0.2px;
+}
+
+.tg-btn:active {
+  opacity: 0.85;
+  transform: scale(0.99);
+}
+
+.tg-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.tg-btn-secondary {
+  background-color: var(--tg-secondary-bg);
+  color: var(--tg-text);
+}
+
+.tg-btn-destructive {
+  background-color: var(--tg-destructive);
+  color: #ffffff;
+}
+
+/* ============================================
+   Attendance Status colors
+   ============================================ */
+.status-present {
+  color: var(--status-present);
+}
+
+.status-absent {
+  color: var(--status-absent);
+}
+
+.status-late {
+  color: var(--status-late);
+}
+
+.status-bg-present {
+  background-color: var(--status-present);
+}
+
+.status-bg-absent {
+  background-color: var(--status-absent);
+}
+
+.status-bg-late {
+  background-color: var(--status-late);
+}
+
+/* Pill status badge */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+/* ============================================
+   Attendance toggle buttons
+   ============================================ */
+.attendance-toggle {
+  display: flex;
+  gap: 6px;
+}
+
+.attendance-btn {
+  flex: 1;
+  padding: 8px 4px;
+  border-radius: 10px;
+  border: 1.5px solid transparent;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: var(--tg-secondary-bg);
+  color: var(--tg-hint);
+  text-align: center;
+}
+
+.attendance-btn:active {
+  transform: scale(0.97);
+}
+
+.attendance-btn.active-present {
+  background-color: color-mix(in srgb, var(--status-present) 15%, transparent);
+  border-color: var(--status-present);
+  color: var(--status-present);
+}
+
+.attendance-btn.active-absent {
+  background-color: color-mix(in srgb, var(--status-absent) 15%, transparent);
+  border-color: var(--status-absent);
+  color: var(--status-absent);
+}
+
+.attendance-btn.active-late {
+  background-color: color-mix(in srgb, var(--status-late) 15%, transparent);
+  border-color: var(--status-late);
+  color: var(--status-late);
+}
+
+/* ============================================
+   Avatar
+   ============================================ */
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--tg-button);
+  color: var(--tg-button-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ============================================
+   Bottom Navigation
+   ============================================ */
+.bottom-nav {
+  display: flex;
+  background-color: var(--tg-bottom-bar-bg);
+  border-top: 0.5px solid color-mix(in srgb, var(--tg-hint) 30%, transparent);
+  padding-bottom: var(--safe-bottom);
+}
+
+.bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
+  gap: 4px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  color: var(--tg-hint);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.bottom-nav-item.active {
+  color: var(--tg-accent);
+}
+
+/* ============================================
+   Skeleton loading
+   ============================================ */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--tg-secondary-bg) 25%,
+    color-mix(in srgb, var(--tg-hint) 20%, transparent) 50%,
+    var(--tg-secondary-bg) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+/* ============================================
+   Page transitions
+   ============================================ */
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-enter {
+  animation: fadeSlideIn 0.25s ease forwards;
+}
+
+/* ============================================
+   Stats card
+   ============================================ */
+.stat-card {
+  background: var(--tg-section-bg);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--tg-text);
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--tg-subtitle);
+  font-weight: 500;
+}
+
+/* ============================================
+   Spinner animation
+   ============================================ */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
