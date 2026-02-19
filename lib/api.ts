@@ -9,7 +9,7 @@ import {
 } from './types'
 
 const API_BASE =
-	`${process.env.NEXT_PUBLIC_API_URL}/api/v1` ||
+	`${process.env.NEXT_PUBLIC_API_URL}` ||
 	'https://helminthoid-clumsily-xuan.ngrok-free.dev/api/v1'
 
 // ============================================
