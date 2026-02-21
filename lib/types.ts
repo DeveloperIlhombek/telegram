@@ -141,11 +141,39 @@ export interface GroupListResponse {
 export interface Student {
 	id: number
 	user_id: number
-	user: User
 	group_id: number
-	group?: Group
+	// Student Info
+	student_id?: string // "STU-2024-001" format
+	first_name: string
+	last_name: string
+	full_name: string
+	// Contact
+	username?: string
+	phone?: string
+	telegram_id: number
+	// Group
+	group_name?: string
+	// Parent Info
+	parent_name?: string
+	parent_phone?: string
+	// Dates
+	enrollment_date: string // ISO date
+	// Status
+	is_active: boolean
+	// Computed
+	days_enrolled?: number // Calculated in backend
+	// Timestamps
+	created_at: string
+	updated_at?: string
 }
-
+export interface StudentResponse extends Student {}
+export interface StudentListResponse {
+	items: Student[]
+	total: number
+	page: number
+	size: number
+	pages: number
+}
 export interface AttendanceRecord {
 	id: number
 	date: string // ISO date

@@ -200,7 +200,10 @@ export const adminApi = {
 		first_name: string
 		last_name: string
 		phone?: string
-		group_id: number
+		username?: string | undefined
+		group_id: number | undefined
+		parent_name: string | undefined
+		parent_phone: string | undefined
 	}) => api.post<Student>('/admin/students', data),
 	deleteStudent: (id: number) => api.delete<void>(`/admin/students/${id}`),
 
