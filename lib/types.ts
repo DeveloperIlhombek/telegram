@@ -165,14 +165,8 @@ export interface Student {
 	// Timestamps
 	created_at: string
 	updated_at?: string
-}
-export interface StudentResponse extends Student {}
-export interface StudentListResponse {
-	items: Student[]
-	total: number
-	page: number
-	size: number
-	pages: number
+	user: User
+	group?: Group
 }
 export interface AttendanceRecord {
 	id: number
