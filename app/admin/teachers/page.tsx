@@ -173,3 +173,5 @@ const inputStyle: React.CSSProperties = {
   border: "none", borderRadius: "12px",
   fontSize: "15px", color: "var(--tg-text)", outline: "none",
 };
+
+
