@@ -105,6 +105,7 @@ export interface User {
 	telegram_id: number
 	first_name: string
 	last_name: string
+	username?: string
 	phone?: string
 	role: UserRole
 	photo_url?: string

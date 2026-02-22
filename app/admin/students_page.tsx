@@ -95,8 +95,8 @@ export default function AdminStudentsPage() {
 			haptic.error()
 			await tgAlert("O'chirib bo'lmadi!")
 		}
+		
 	}
-
 	if (isLoading) return <LoadingScreen />
 
 	return (
