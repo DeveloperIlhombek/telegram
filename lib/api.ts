@@ -199,6 +199,7 @@ export const adminApi = {
 		telegram_id: number
 		first_name: string
 		last_name: string
+		full_name?: string
 		phone?: string
 		username?: string | undefined
 		group_id: number | undefined
