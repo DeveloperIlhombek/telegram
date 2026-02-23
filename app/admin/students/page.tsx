@@ -394,7 +394,7 @@ export default function AdminStudentsPage() {
 
 							return (
 								<Link
-									href={`/admin/students/${student.id}`}
+									href={`/admin/students/10`}
 									key={student.id}
 									className='tg-list-item'
 									style={{
