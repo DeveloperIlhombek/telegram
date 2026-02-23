@@ -11,7 +11,8 @@ import { useEffect, useState } from 'react'
 export default function StudentDetailPage() {
 	const router = useRouter()
 	const params = useParams()
-	const studentId = parseInt(params.id as string)
+	const studentIdParam = Array.isArray(params.id) ? params.id[0] : params.id
+	const studentId = studentIdParam ? parseInt(studentIdParam, 10) : NaN
 
 	const [student, setStudent] = useState<Student | null>(null)
 	const [attendance, setAttendance] = useState<AttendanceRecord[]>([])
