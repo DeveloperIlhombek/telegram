@@ -4,6 +4,7 @@ import { EmptyState, LoadingScreen, PageHeader } from '@/components/shared'
 import { adminApi } from '@/lib/api'
 import { haptic, tgAlert, tgConfirm } from '@/lib/telegram'
 import { Group, Student } from '@/lib/types'
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
 interface StudentForm {
@@ -392,7 +393,8 @@ export default function AdminStudentsPage() {
 								: 0
 
 							return (
-								<div
+								<Link
+									href={`/admin/students/${student.id}`}
 									key={student.id}
 									className='tg-list-item'
 									style={{
@@ -523,7 +525,11 @@ export default function AdminStudentsPage() {
 									{/* Actions */}
 									<div style={{ display: 'flex', gap: '8px' }}>
 										<button
-											onClick={() => handleDelete(student)}
+											onClick={e => {
+												e.preventDefault()
+												e.stopPropagation()
+												handleDelete(student)
+											}}
 											style={{
 												flex: 1,
 												background:
@@ -540,7 +546,7 @@ export default function AdminStudentsPage() {
 											O'chirish
 										</button>
 									</div>
-								</div>
+								</Link>
 							)
 						})}
 					</div>
