@@ -187,6 +187,11 @@ export const adminApi = {
 		first_name: string
 		last_name: string
 		phone?: string
+		username?: string
+		specialization?: string
+		experience_years?: number
+		bio?: string
+		salary?: number | string
 	}) => api.post<User>('/admin/teachers', data),
 	deleteTeacher: (id: number) => api.delete<void>(`/admin/teachers/${id}`),
 
@@ -206,6 +211,7 @@ export const adminApi = {
 		parent_name: string | undefined
 		parent_phone: string | undefined
 	}) => api.post<Student>('/admin/students', data),
+
 	deleteStudent: (id: number) => api.delete<void>(`/admin/students/${id}`),
 
 	// Groups

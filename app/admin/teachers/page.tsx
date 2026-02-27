@@ -17,8 +17,11 @@ export default function AdminTeachersPage() {
 		first_name: '',
 		last_name: '',
 		phone: '',
+		specialization: '',
+		experience_years: 0,
+		bio: '',
+		salary: 500000,
 	})
-
 	const loadTeachers = async () => {
 		setIsLoading(true)
 		try {
@@ -47,9 +50,22 @@ export default function AdminTeachersPage() {
 				first_name: form.first_name.trim(),
 				last_name: form.last_name.trim(),
 				phone: form.phone.trim() || undefined,
+				bio: form.bio.trim(),
+				specialization: form.specialization.trim(),
+				experience_years: form.experience_years || undefined,
+				salary: form.salary,
 			})
 			haptic.success()
-			setForm({ telegram_id: '', first_name: '', last_name: '', phone: '' })
+			setForm({
+				telegram_id: '',
+				first_name: '',
+				last_name: '',
+				phone: '',
+				specialization: '',
+				experience_years: 0,
+				bio: '',
+				salary: 500000,
+			})
 			setShowForm(false)
 			loadTeachers()
 		} catch {
@@ -145,6 +161,40 @@ export default function AdminTeachersPage() {
 							type='tel'
 							value={form.phone}
 							onChange={e => setForm({ ...form, phone: e.target.value })}
+							style={inputStyle}
+						/>
+						<input
+							placeholder='Mutaxassisligi'
+							type='text'
+							value={form.specialization}
+							onChange={e =>
+								setForm({ ...form, specialization: e.target.value })
+							}
+							style={inputStyle}
+						/>
+						<input
+							placeholder='Tajriba yillari'
+							type='number'
+							value={form.experience_years}
+							onChange={e =>
+								setForm({ ...form, experience_years: parseInt(e.target.value) })
+							}
+							style={inputStyle}
+						/>
+						<input
+							placeholder='bio'
+							type='tel'
+							value={form.bio}
+							onChange={e => setForm({ ...form, bio: e.target.value })}
+							style={inputStyle}
+						/>
+						<input
+							placeholder='Maosh'
+							type='number'
+							value={form.salary}
+							onChange={e =>
+								setForm({ ...form, salary: parseInt(e.target.value) })
+							}
 							style={inputStyle}
 						/>
 						<button className='tg-btn' onClick={handleCreate}>

@@ -169,6 +169,7 @@ export interface Student {
 	user: User
 	group?: Group
 }
+
 export interface AttendanceRecord {
 	id: number
 	date: string // ISO date
