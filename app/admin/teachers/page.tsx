@@ -16,6 +16,7 @@ export default function AdminTeachersPage() {
 		telegram_id: '',
 		first_name: '',
 		last_name: '',
+		username: '',
 		phone: '',
 		specialization: '',
 		experience_years: 0,
@@ -60,6 +61,7 @@ export default function AdminTeachersPage() {
 				telegram_id: '',
 				first_name: '',
 				last_name: '',
+				username: '',
 				phone: '',
 				specialization: '',
 				experience_years: 0,
@@ -170,6 +172,13 @@ export default function AdminTeachersPage() {
 							onChange={e =>
 								setForm({ ...form, specialization: e.target.value })
 							}
+							style={inputStyle}
+						/>
+						<input
+							placeholder='Username'
+							type='text'
+							value={form.username}
+							onChange={e => setForm({ ...form, username: e.target.value })}
 							style={inputStyle}
 						/>
 						<input

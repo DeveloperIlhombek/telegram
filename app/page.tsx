@@ -9,13 +9,13 @@ export default function RootPage() {
 		<div className='min-h-screen flex items-center justify-center gap-4'>
 			<Link
 				href={'/login'}
-				className='w-44 h-24 bg-teal-400 text-2xl text-gray-300 border cursor-pointer'
+				className='w-44 h-20 bg-teal-400 text-2xl text-gray-300 border-2 rounded-2xl border-amber-600 cursor-pointer'
 			>
 				Login sahifasi
 			</Link>
 			<Link
 				href={'/register'}
-				className='w-44 h-24 bg-teal-400 text-2xl text-gray-300 border cursor-pointer'
+				className='w-44 h-20 bg-teal-400 text-2xl text-gray-300 border-2 rounded-2xl border-amber-600 cursor-pointer'
 			>
 				Register sahifasi
 			</Link>
