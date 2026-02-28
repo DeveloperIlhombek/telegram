@@ -28,7 +28,9 @@ export default function AdminStudentsPage() {
 		setIsLoading(true)
 		try {
 			const [studentsRes, groupsRes] = await Promise.all([
-				adminApi.getStudents(selectedGroup),
+				adminApi.getStudents(
+					selectedGroup ? { group_id: selectedGroup } : undefined,
+				),
 				adminApi.getGroups(),
 			])
 			setStudents(studentsRes.items)
@@ -55,7 +57,7 @@ export default function AdminStudentsPage() {
 				telegram_id: parseInt(form.telegram_id),
 				first_name: form.first_name.trim(),
 				last_name: form.last_name.trim(),
-				full_name: `${form.first_name} ${form.last_name}`,
+				// full_name: `${form.first_name} ${form.last_name}`,
 				username: form.username.trim() || undefined,
 				phone: form.phone.trim() || undefined,
 				group_id: form.group_id ? parseInt(form.group_id) : undefined,
@@ -95,7 +97,6 @@ export default function AdminStudentsPage() {
 			haptic.error()
 			await tgAlert("O'chirib bo'lmadi!")
 		}
-		
 	}
 	if (isLoading) return <LoadingScreen />
 
