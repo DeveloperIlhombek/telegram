@@ -50,6 +50,7 @@ export default function AdminTeachersPage() {
 				telegram_id: parseInt(form.telegram_id),
 				first_name: form.first_name.trim(),
 				last_name: form.last_name.trim(),
+				username: form.username.trim(),
 				phone: form.phone.trim() || undefined,
 				bio: form.bio.trim(),
 				specialization: form.specialization.trim(),
