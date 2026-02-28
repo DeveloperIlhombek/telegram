@@ -394,7 +394,7 @@ export default function AdminStudentsPage() {
 
 							return (
 								<Link
-									href={`/admin/students/10`}
+									href={`https://helminthoid-clumsily-xuan.ngrok-free.dev/api/v1/admin/students/1`}
 									key={student.id}
 									className='tg-list-item'
 									style={{
