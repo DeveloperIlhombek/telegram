@@ -97,8 +97,16 @@ export interface TelegramWebApp {
 // App Domain Types
 // ============================================
 export type UserRole = 'superadmin' | 'admin' | 'teacher' | 'student'
-
 export type AttendanceStatus = 'present' | 'absent' | 'late'
+
+// Student enums (backend bilan mos)
+export type StudentStatus =
+	| 'active'
+	| 'inactive'
+	| 'graduated'
+	| 'suspended'
+	| 'expelled'
+export type PaymentStatus = 'paid' | 'unpaid' | 'partial' | 'overdue'
 
 export interface User {
 	id: number
@@ -116,20 +124,19 @@ export interface Group {
 	name: string
 	teacher_id: number
 	teacher_name?: string
-	teacher?: User // Populated teacher object
+	teacher?: User
 	description?: string
 	course_name?: string
 	level?: string
-	schedule_days?: string // "1,3,5" format
-	class_time?: string // "10:00" format
+	schedule_days?: string
+	class_time?: string
 	max_students?: number
 	student_count?: number
 	is_active: boolean
-
-	// Timestamps
 	created_at: string
 	updated_at?: string
 }
+
 export interface GroupResponse extends Group {}
 
 export interface GroupListResponse {
@@ -139,40 +146,61 @@ export interface GroupListResponse {
 	size: number
 	pages: number
 }
+
 export interface Student {
 	id: number
 	user_id: number
-	group_id: number
-	// Student Info
-	student_id?: string // "STU-2024-001" format
+	group_id?: number | null
+
+	// IDs
+	student_id?: string // "STU-2024-001"
+
+	// Personal Info
 	first_name: string
 	last_name: string
 	full_name: string
-	// Contact
 	username?: string
 	phone?: string
 	telegram_id: number
+
 	// Group
 	group_name?: string
+
 	// Parent Info
 	parent_name?: string
 	parent_phone?: string
-	// Dates
-	enrollment_date: string // ISO date
+	emergency_contact?: string
+
+	// Additional
+	address?: string
+	notes?: string
+
+	// Enrollment
+	enrollment_date: string
+
+	// Payment
+	payment_status: PaymentStatus
+	monthly_fee?: number | null
+	discount_percent?: number
+	last_payment_date?: string | null
+	debt_amount?: number
+
 	// Status
+	status: StudentStatus
 	is_active: boolean
-	// Computed
-	days_enrolled?: number // Calculated in backend
+
 	// Timestamps
 	created_at: string
 	updated_at?: string
-	user: User
+
+	// Relations (optional, populated in some responses)
+	user?: User
 	group?: Group
 }
 
 export interface AttendanceRecord {
 	id: number
-	date: string // ISO date
+	date: string
 	student_id: number
 	student?: Student
 	status: AttendanceStatus
@@ -214,4 +242,5 @@ export interface PaginatedResponse<T> {
 	total: number
 	page: number
 	size: number
+	pages: number
 }
