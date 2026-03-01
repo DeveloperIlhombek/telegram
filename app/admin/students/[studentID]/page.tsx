@@ -9,7 +9,7 @@ import {
 	Student,
 	StudentStatus,
 } from '@/lib/types'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 // ─── constants ────────────────────────────────────────────────────────────────
@@ -83,10 +83,19 @@ const TABS: { key: Tab; label: string }[] = [
 export default function StudentDetailPage() {
 	const router = useRouter()
 	const params = useParams()
+	const pathname = usePathname()
 
 	// ✅ NaN fix: safely parse id
 	const rawId = Array.isArray(params?.id) ? params.id[0] : (params?.id ?? '')
+	console.log(`raw id : ${rawId}`)
+
 	const studentId = rawId && !isNaN(Number(rawId)) ? parseInt(rawId, 10) : null
+	console.log(`Student ID ${studentId}`)
+
+	console.log(`Params ID ${params.id}`)
+	console.log('NIma qilish kerak eeee')
+
+	// console.log(studentId)
 
 	const [student, setStudent] = useState<Student | null>(null)
 	const [attendance, setAttendance] = useState<AttendanceRecord[]>([])
@@ -102,7 +111,11 @@ export default function StudentDetailPage() {
 		absent: 0,
 		late: 0,
 	})
+	const path = Number(pathname.split('/')[3])
+	console.log(`Umumiy path name ${pathname}`)
 
+	console.log(`path ning qiymai ${path}`)
+	console.log(typeof path + 'Bu path typi')
 	useEffect(() => {
 		// ✅ guard: don't fetch if id is invalid
 		if (!studentId) {
@@ -119,7 +132,7 @@ export default function StudentDetailPage() {
 		setLoading(true)
 		try {
 			const [sRes, gRes, attRes] = await Promise.all([
-				adminApi.getStudent(studentId),
+				adminApi.getStudent(path),
 				adminApi.getGroups(1, 100),
 				adminApi
 					.getStudentAttendance(studentId)

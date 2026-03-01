@@ -3,6 +3,7 @@
 import { adminApi, StudentCreateData } from '@/lib/api'
 import { haptic, tgAlert, tgConfirm } from '@/lib/telegram'
 import { Group, PaymentStatus, Student, StudentStatus } from '@/lib/types'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
@@ -465,6 +466,11 @@ export default function AdminStudentsPage() {
 										router.push(`/admin/students/${Number(s.id)}`)
 									}}
 								>
+									<button>
+										<Link href={`/admin/students/${s.id}`}>
+											Student ID ga o'tish
+										</Link>
+									</button>
 									<div className='sp-card-body'>
 										<div
 											className='sp-avatar'
