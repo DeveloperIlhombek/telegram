@@ -3,55 +3,50 @@
 import { adminApi, StudentCreateData } from '@/lib/api'
 import { haptic, tgAlert, tgConfirm } from '@/lib/telegram'
 import { Group, PaymentStatus, Student, StudentStatus } from '@/lib/types'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
-// ─── helpers ──────────────────────────────────────────────────────────────────
-
-const statusLabel: Record<StudentStatus, string> = {
+const STATUS_LABEL: Record<StudentStatus, string> = {
 	active: 'Faol',
 	inactive: 'Faol emas',
 	graduated: 'Bitirgan',
 	suspended: "To'xtatilgan",
 	expelled: 'Chiqarilgan',
 }
-const statusColor: Record<StudentStatus, string> = {
-	active: '#30d158',
-	inactive: '#8e8e93',
-	graduated: '#007aff',
-	suspended: '#ff9500',
-	expelled: '#ff3b30',
+const STATUS_VAR: Record<StudentStatus, string> = {
+	active: 'var(--tg-success)',
+	inactive: 'var(--tg-hint)',
+	graduated: 'var(--tg-link)',
+	suspended: 'var(--tg-warning)',
+	expelled: 'var(--tg-destructive)',
 }
-const paymentColor: Record<PaymentStatus, string> = {
-	paid: '#30d158',
-	unpaid: '#ff3b30',
-	partial: '#ff9500',
-	overdue: '#ff2d55',
-}
-const paymentLabel: Record<PaymentStatus, string> = {
+const PAY_LABEL: Record<PaymentStatus, string> = {
 	paid: "To'langan",
 	unpaid: "To'lanmagan",
 	partial: 'Qisman',
-	overdue: 'Muddati otgan',
+	overdue: "Muddati o'tgan",
 }
-
-function getInitials(first: string, last: string) {
-	return `${first[0] || ''}${last[0] || ''}`.toUpperCase()
+const PAY_VAR: Record<PaymentStatus, string> = {
+	paid: 'var(--tg-success)',
+	unpaid: 'var(--tg-destructive)',
+	partial: 'var(--tg-warning)',
+	overdue: 'var(--tg-destructive)',
 }
-
-const AVATAR_COLORS = [
-	'linear-gradient(135deg,#667eea,#764ba2)',
-	'linear-gradient(135deg,#f093fb,#f5576c)',
-	'linear-gradient(135deg,#4facfe,#00f2fe)',
-	'linear-gradient(135deg,#43e97b,#38f9d7)',
-	'linear-gradient(135deg,#fa709a,#fee140)',
-	'linear-gradient(135deg,#a18cd1,#fbc2eb)',
+const GRADS = [
+	'135deg,#667eea,#764ba2',
+	'135deg,#f093fb,#f5576c',
+	'135deg,#4facfe,#00f2fe',
+	'135deg,#43e97b,#38f9d7',
+	'135deg,#fa709a,#fee140',
+	'135deg,#a18cd1,#fbc2eb',
+	'135deg,#fd7043,#ff8a65',
+	'135deg,#26c6da,#00acc1',
 ]
-function avatarColor(id: number) {
-	return AVATAR_COLORS[id % AVATAR_COLORS.length]
-}
+const avatarGrad = (id: number) =>
+	`linear-gradient(${GRADS[id % GRADS.length]})`
+const getInitials = (f: string, l: string) =>
+	`${f[0] || ''}${l[0] || ''}`.toUpperCase()
 
-// ─── empty form ───────────────────────────────────────────────────────────────
 const EMPTY: StudentCreateData & { telegram_id: number } = {
 	telegram_id: '' as unknown as number,
 	first_name: '',
@@ -68,8 +63,8 @@ const EMPTY: StudentCreateData & { telegram_id: number } = {
 	discount_percent: 0,
 }
 
-// ─── component ────────────────────────────────────────────────────────────────
 export default function AdminStudentsPage() {
+	const router = useRouter()
 	const [students, setStudents] = useState<Student[]>([])
 	const [groups, setGroups] = useState<Group[]>([])
 	const [loading, setLoading] = useState(true)
@@ -77,27 +72,26 @@ export default function AdminStudentsPage() {
 	const [submitting, setSubmitting] = useState(false)
 	const [form, setForm] = useState(EMPTY)
 	const [search, setSearch] = useState('')
-	const [filterGroup, setFilterGroup] = useState('')
-	const [filterStatus, setFilterStatus] = useState<StudentStatus | ''>('')
-	const [filterPayment, setFilterPayment] = useState<PaymentStatus | ''>('')
+	const [fGroup, setFGroup] = useState('')
+	const [fStatus, setFStatus] = useState<StudentStatus | ''>('')
+	const [fPay, setFPay] = useState<PaymentStatus | ''>('')
 	const [page, setPage] = useState(1)
 	const [totalPages, setTotalPages] = useState(1)
 	const [total, setTotal] = useState(0)
-	const [visibleCards, setVisibleCards] = useState<Set<number>>(new Set())
-	const formRef = useRef<HTMLDivElement>(null)
-	const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+	const [visible, setVisible] = useState<Set<number>>(new Set())
+	const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-	// ── load ──────────────────────────────────────────────────────────────────
-	const load = async (p = page) => {
+	const load = async (p = 1) => {
 		setLoading(true)
+		setVisible(new Set())
 		try {
 			const [sRes, gRes] = await Promise.all([
 				adminApi.getStudents({
 					page: p,
 					size: 15,
-					group_id: filterGroup ? Number(filterGroup) : undefined,
-					status: filterStatus || undefined,
-					payment_status: filterPayment || undefined,
+					group_id: fGroup ? Number(fGroup) : undefined,
+					status: fStatus || undefined,
+					payment_status: fPay || undefined,
 					search: search || undefined,
 				}),
 				adminApi.getGroups(1, 100),
@@ -106,13 +100,8 @@ export default function AdminStudentsPage() {
 			setTotal(sRes.total)
 			setTotalPages(Math.ceil(sRes.total / 15))
 			setGroups(gRes.items)
-			// animate cards in
-			setTimeout(() => {
-				const ids = new Set(sRes.items.map(s => s.id))
-				setVisibleCards(ids)
-			}, 50)
-		} catch (e) {
-			console.error(e)
+			setTimeout(() => setVisible(new Set(sRes.items.map(s => s.id))), 60)
+		} catch {
 			await tgAlert("Ma'lumotlarni yuklab bo'lmadi!")
 		} finally {
 			setLoading(false)
@@ -122,30 +111,23 @@ export default function AdminStudentsPage() {
 	useEffect(() => {
 		load(1)
 		setPage(1)
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [filterGroup, filterStatus, filterPayment])
-
+	}, [fGroup, fStatus, fPay]) // eslint-disable-line
 	useEffect(() => {
-		clearTimeout(searchTimeout.current!) /*Xato chiqishi mumkin */
-		searchTimeout.current = setTimeout(() => {
+		if (searchTimer.current) clearTimeout(searchTimer.current)
+		searchTimer.current = setTimeout(() => {
 			load(1)
 			setPage(1)
-		}, 400)
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [search])
+		}, 380)
+	}, [search]) // eslint-disable-line
 
-	const changePage = (p: number) => {
+	const goPage = (p: number) => {
 		setPage(p)
-		setVisibleCards(new Set())
 		load(p)
 	}
 
-	// ── submit ────────────────────────────────────────────────────────────────
 	const handleSubmit = async () => {
-		if (!form.telegram_id || !form.first_name || !form.last_name) {
-			await tgAlert('Telegram ID, ism va familiya majburiy!')
-			return
-		}
+		if (!form.telegram_id || !form.first_name || !form.last_name)
+			return tgAlert('Telegram ID, ism va familiya majburiy!')
 		setSubmitting(true)
 		haptic.medium()
 		try {
@@ -175,10 +157,10 @@ export default function AdminStudentsPage() {
 		}
 	}
 
-	// ── delete ────────────────────────────────────────────────────────────────
-	const handleDelete = async (s: Student) => {
-		const ok = await tgConfirm(`${s.first_name} ${s.last_name} ni o'chirish?`)
-		if (!ok) return
+	const handleDelete = async (s: Student, e: React.MouseEvent) => {
+		e.stopPropagation()
+		if (!(await tgConfirm(`${s.first_name} ${s.last_name} ni o'chirish?`)))
+			return
 		haptic.medium()
 		try {
 			await adminApi.deleteStudent(s.id)
@@ -190,719 +172,372 @@ export default function AdminStudentsPage() {
 		}
 	}
 
-	// ── render ────────────────────────────────────────────────────────────────
 	return (
 		<>
-			<style>{`
-				@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
-
-				*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-				.sp { font-family: 'Outfit', sans-serif; }
-
-				/* ── page ── */
-				.sp-page {
-					min-height: 100vh;
-					background: #0a0a0f;
-					color: #f0f0f5;
-					position: relative;
-					overflow-x: hidden;
-				}
-				.sp-page::before {
-					content: '';
-					position: fixed;
-					inset: 0;
-					background:
-						radial-gradient(ellipse 80% 50% at 20% 10%, rgba(99,102,241,.18) 0%, transparent 60%),
-						radial-gradient(ellipse 60% 40% at 80% 80%, rgba(168,85,247,.12) 0%, transparent 60%);
-					pointer-events: none;
-					z-index: 0;
-				}
-
-				/* ── header ── */
-				.sp-header {
-					position: sticky; top: 0; z-index: 50;
-					display: flex; align-items: center; justify-content: space-between;
-					padding: 16px 20px;
-					background: rgba(10,10,15,.85);
-					backdrop-filter: blur(20px);
-					border-bottom: 1px solid rgba(255,255,255,.06);
-				}
-				.sp-header-title { font-size: 22px; font-weight: 800; letter-spacing: -.5px; }
-				.sp-header-sub { font-size: 12px; color: rgba(255,255,255,.4); margin-top: 1px; }
-
-				.sp-add-btn {
-					display: flex; align-items: center; gap: 6px;
-					padding: 9px 18px;
-					background: linear-gradient(135deg, #6366f1, #8b5cf6);
-					color: #fff; border: none; border-radius: 24px;
-					font-family: 'Outfit', sans-serif;
-					font-size: 14px; font-weight: 700;
-					cursor: pointer;
-					transition: all .2s;
-					box-shadow: 0 4px 20px rgba(99,102,241,.4);
-				}
-				.sp-add-btn:active { transform: scale(.96); }
-				.sp-add-btn.cancel {
-					background: rgba(255,255,255,.08);
-					box-shadow: none;
-					color: rgba(255,255,255,.7);
-				}
-
-				/* ── filters ── */
-				.sp-filters {
-					padding: 12px 16px;
-					display: flex; gap: 8px; flex-wrap: wrap;
-					border-bottom: 1px solid rgba(255,255,255,.06);
-					position: relative; z-index: 1;
-				}
-				.sp-search {
-					flex: 1; min-width: 160px;
-					padding: 10px 14px 10px 36px;
-					background: rgba(255,255,255,.06);
-					border: 1px solid rgba(255,255,255,.08);
-					border-radius: 12px;
-					font-family: 'Outfit', sans-serif;
-					font-size: 14px; color: #f0f0f5;
-					outline: none;
-					transition: border-color .2s;
-				}
-				.sp-search:focus { border-color: rgba(99,102,241,.5); }
-				.sp-search-wrap { position: relative; flex: 1; min-width: 160px; }
-				.sp-search-icon {
-					position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
-					color: rgba(255,255,255,.35); font-size: 15px; pointer-events: none;
-				}
-				.sp-select {
-					padding: 10px 14px;
-					background: rgba(255,255,255,.06);
-					border: 1px solid rgba(255,255,255,.08);
-					border-radius: 12px;
-					font-family: 'Outfit', sans-serif;
-					font-size: 13px; color: #f0f0f5;
-					outline: none; cursor: pointer;
-					transition: border-color .2s;
-				}
-				.sp-select:focus { border-color: rgba(99,102,241,.5); }
-
-				/* ── form ── */
-				.sp-form-wrap {
-					margin: 16px; border-radius: 20px;
-					background: rgba(255,255,255,.04);
-					border: 1px solid rgba(255,255,255,.08);
-					overflow: hidden;
-					animation: slideDown .3s cubic-bezier(.16,1,.3,1);
-					position: relative; z-index: 1;
-				}
-				@keyframes slideDown {
-					from { opacity: 0; transform: translateY(-16px); }
-					to   { opacity: 1; transform: translateY(0); }
-				}
-				.sp-form-header {
-					padding: 18px 20px 14px;
-					border-bottom: 1px solid rgba(255,255,255,.06);
-					display: flex; align-items: center; justify-content: space-between;
-				}
-				.sp-form-title { font-size: 17px; font-weight: 700; }
-				.sp-form-body { padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 14px; }
-				.sp-form-section-label {
-					font-size: 11px; font-weight: 700; letter-spacing: 1px;
-					text-transform: uppercase; color: rgba(255,255,255,.35);
-					margin-bottom: -6px;
-				}
-				.sp-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-				.sp-label {
-					display: block; font-size: 12px; font-weight: 600;
-					color: rgba(255,255,255,.45); margin-bottom: 5px;
-				}
-				.sp-input {
-					width: 100%; padding: 11px 14px;
-					background: rgba(255,255,255,.07);
-					border: 1px solid rgba(255,255,255,.08);
-					border-radius: 12px;
-					font-family: 'Outfit', sans-serif;
-					font-size: 14px; color: #f0f0f5;
-					outline: none; transition: border-color .2s;
-				}
-				.sp-input:focus { border-color: rgba(99,102,241,.6); background: rgba(255,255,255,.09); }
-				.sp-input::placeholder { color: rgba(255,255,255,.2); }
-				.sp-hint { font-size: 11px; color: rgba(255,255,255,.25); margin-top: 4px; }
-
-				.sp-submit-btn {
-					width: 100%; padding: 14px;
-					background: linear-gradient(135deg, #6366f1, #8b5cf6);
-					color: #fff; border: none; border-radius: 14px;
-					font-family: 'Outfit', sans-serif;
-					font-size: 15px; font-weight: 700;
-					cursor: pointer; margin-top: 4px;
-					transition: all .2s;
-					box-shadow: 0 6px 24px rgba(99,102,241,.4);
-				}
-				.sp-submit-btn:disabled { opacity: .6; cursor: not-allowed; }
-				.sp-submit-btn:not(:disabled):active { transform: scale(.98); }
-
-				/* ── list ── */
-				.sp-list { padding: 12px 16px 32px; position: relative; z-index: 1; }
-
-				/* ── card ── */
-				.sp-card {
-					background: rgba(255,255,255,.04);
-					border: 1px solid rgba(255,255,255,.07);
-					border-radius: 20px;
-					margin-bottom: 12px;
-					overflow: hidden;
-					opacity: 0;
-					transform: translateY(16px);
-					transition: opacity .35s ease, transform .35s ease, border-color .2s;
-				}
-				.sp-card.visible { opacity: 1; transform: translateY(0); }
-				.sp-card:hover { border-color: rgba(99,102,241,.25); }
-
-				.sp-card-top {
-					padding: 16px;
-					display: flex; gap: 14px; align-items: flex-start;
-					text-decoration: none; color: inherit;
-				}
-				.sp-avatar {
-					width: 52px; height: 52px; border-radius: 16px;
-					display: flex; align-items: center; justify-content: center;
-					font-size: 18px; font-weight: 800; color: #fff;
-					flex-shrink: 0;
-					box-shadow: 0 4px 12px rgba(0,0,0,.3);
-				}
-				.sp-card-name { font-size: 17px; font-weight: 700; line-height: 1.2; }
-				.sp-card-id {
-					font-size: 11px; color: rgba(255,255,255,.35);
-					font-family: 'SF Mono', monospace;
-					margin-top: 3px;
-				}
-				.sp-card-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-				.sp-tag {
-					padding: 3px 9px;
-					border-radius: 20px;
-					font-size: 11px; font-weight: 600;
-					background: rgba(255,255,255,.08);
-					color: rgba(255,255,255,.55);
-				}
-				.sp-tag.group-tag {
-					background: rgba(99,102,241,.15);
-					color: #818cf8;
-				}
-
-				/* badges */
-				.sp-badge {
-					display: inline-flex; align-items: center; gap: 4px;
-					padding: 3px 9px;
-					border-radius: 20px;
-					font-size: 11px; font-weight: 700;
-				}
-
-				/* ── card footer ── */
-				.sp-card-footer {
-					padding: 10px 16px 14px;
-					display: flex; gap: 8px;
-					border-top: 1px solid rgba(255,255,255,.05);
-				}
-				.sp-action-btn {
-					flex: 1; padding: 10px 8px;
-					border: none; border-radius: 12px;
-					font-family: 'Outfit', sans-serif;
-					font-size: 13px; font-weight: 600;
-					cursor: pointer; transition: all .15s;
-					display: flex; align-items: center; justify-content: center; gap: 5px;
-				}
-				.sp-action-btn:active { transform: scale(.96); }
-				.sp-action-btn.view-btn {
-					background: rgba(99,102,241,.15); color: #818cf8;
-					text-decoration: none;
-				}
-				.sp-action-btn.del-btn {
-					background: rgba(255,59,48,.1); color: #ff453a;
-				}
-
-				/* ── extra info ── */
-				.sp-card-extra {
-					padding: 0 16px 12px;
-					display: flex; flex-wrap: wrap; gap: 6px;
-				}
-				.sp-info-chip {
-					display: flex; align-items: center; gap: 5px;
-					font-size: 12px; color: rgba(255,255,255,.45);
-				}
-
-				/* ── pagination ── */
-				.sp-pagination {
-					display: flex; align-items: center; justify-content: center; gap: 8px;
-					padding: 8px 16px 24px;
-					position: relative; z-index: 1;
-				}
-				.sp-page-btn {
-					min-width: 36px; height: 36px; padding: 0 10px;
-					border: 1px solid rgba(255,255,255,.1);
-					border-radius: 10px;
-					background: rgba(255,255,255,.05);
-					color: rgba(255,255,255,.6);
-					font-family: 'Outfit', sans-serif;
-					font-size: 13px; font-weight: 600;
-					cursor: pointer; transition: all .15s;
-					display: flex; align-items: center; justify-content: center;
-				}
-				.sp-page-btn:hover { background: rgba(99,102,241,.2); border-color: rgba(99,102,241,.4); color: #fff; }
-				.sp-page-btn.active {
-					background: linear-gradient(135deg,#6366f1,#8b5cf6);
-					border-color: transparent; color: #fff;
-					box-shadow: 0 4px 12px rgba(99,102,241,.4);
-				}
-				.sp-page-btn:disabled { opacity: .35; cursor: not-allowed; }
-
-				/* ── empty ── */
-				.sp-empty {
-					text-align: center; padding: 60px 24px;
-					color: rgba(255,255,255,.3);
-				}
-				.sp-empty-icon { font-size: 52px; margin-bottom: 12px; }
-				.sp-empty-title { font-size: 18px; font-weight: 700; }
-				.sp-empty-sub { font-size: 13px; margin-top: 6px; }
-
-				/* ── skeleton ── */
-				.sp-skeleton { border-radius: 20px; overflow: hidden; margin-bottom: 12px; }
-				.sp-skel-inner {
-					height: 140px;
-					background: linear-gradient(90deg,
-						rgba(255,255,255,.04) 0%,
-						rgba(255,255,255,.09) 50%,
-						rgba(255,255,255,.04) 100%);
-					background-size: 200% 100%;
-					animation: shimmer 1.4s infinite;
-				}
-				@keyframes shimmer { to { background-position: -200% 0; } }
-			`}</style>
-
-			<div className='sp sp-page'>
-				{/* Header */}
-				<div className='sp-header'>
+			<style>{CSS}</style>
+			<div className='sp'>
+				{/* ── Header ── */}
+				<header className='sp-header'>
 					<div>
-						<div className='sp-header-title'>O'quvchilar</div>
-						<div className='sp-header-sub'>{total} ta ro'yxatda</div>
+						<h1 className='sp-title'>O'quvchilar</h1>
+						<p className='sp-sub'>{total} ta ro'yxatda</p>
 					</div>
 					<button
-						className={`sp-add-btn ${showForm ? 'cancel' : ''}`}
+						className={`sp-add-btn${showForm ? ' sp-add-btn--x' : ''}`}
 						onClick={() => {
 							haptic.light()
 							setShowForm(v => !v)
 						}}
 					>
-						{showForm ? '✕ Yopish' : "+ Qo'shish"}
+						{showForm ? '✕' : "+ Qo'shish"}
 					</button>
-				</div>
+				</header>
 
-				{/* Filters */}
+				{/* ── Filters ── */}
 				<div className='sp-filters'>
 					<div className='sp-search-wrap'>
-						<span className='sp-search-icon'>🔍</span>
+						<span className='sp-search-ico'>🔍</span>
 						<input
-							className='sp-search sp'
+							className='sp-search'
 							placeholder='Qidirish...'
 							value={search}
 							onChange={e => setSearch(e.target.value)}
 						/>
 					</div>
-					<select
-						className='sp-select sp'
-						value={filterGroup}
-						onChange={e => setFilterGroup(e.target.value)}
-					>
-						<option value=''>Barcha guruhlar</option>
-						{groups.map(g => (
-							<option key={g.id} value={g.id}>
-								{g.name}
-							</option>
-						))}
-					</select>
-					<select
-						className='sp-select sp'
-						value={filterStatus}
-						onChange={e =>
-							setFilterStatus(e.target.value as StudentStatus | '')
-						}
-					>
-						<option value=''>Barcha statuslar</option>
-						{(Object.keys(statusLabel) as StudentStatus[]).map(s => (
-							<option key={s} value={s}>
-								{statusLabel[s]}
-							</option>
-						))}
-					</select>
-					<select
-						className='sp-select sp'
-						value={filterPayment}
-						onChange={e =>
-							setFilterPayment(e.target.value as PaymentStatus | '')
-						}
-					>
-						<option value=''>Barcha to'lovlar</option>
-						{(Object.keys(paymentLabel) as PaymentStatus[]).map(s => (
-							<option key={s} value={s}>
-								{paymentLabel[s]}
-							</option>
-						))}
-					</select>
+					<div className='sp-chips'>
+						<select
+							className='sp-chip'
+							value={fGroup}
+							onChange={e => setFGroup(e.target.value)}
+						>
+							<option value=''>Barcha guruhlar</option>
+							{groups.map(g => (
+								<option key={g.id} value={g.id}>
+									{g.name}
+								</option>
+							))}
+						</select>
+						<select
+							className='sp-chip'
+							value={fStatus}
+							onChange={e => setFStatus(e.target.value as StudentStatus | '')}
+						>
+							<option value=''>Status</option>
+							{(Object.keys(STATUS_LABEL) as StudentStatus[]).map(s => (
+								<option key={s} value={s}>
+									{STATUS_LABEL[s]}
+								</option>
+							))}
+						</select>
+						<select
+							className='sp-chip'
+							value={fPay}
+							onChange={e => setFPay(e.target.value as PaymentStatus | '')}
+						>
+							<option value=''>To'lov</option>
+							{(Object.keys(PAY_LABEL) as PaymentStatus[]).map(s => (
+								<option key={s} value={s}>
+									{PAY_LABEL[s]}
+								</option>
+							))}
+						</select>
+					</div>
 				</div>
 
-				{/* Form */}
+				{/* ── Add Form ── */}
 				{showForm && (
-					<div className='sp-form-wrap' ref={formRef}>
-						<div className='sp-form-header'>
-							<span className='sp-form-title'>Yangi o'quvchi</span>
+					<div className='sp-form'>
+						<p className='sp-form-sec'>Asosiy ma'lumotlar</p>
+						<div className='sp-field'>
+							<label className='sp-label'>Telegram ID *</label>
+							<input
+								className='sp-inp'
+								type='number'
+								placeholder='123456789'
+								value={form.telegram_id || ''}
+								onChange={e =>
+									setForm({
+										...form,
+										telegram_id: e.target.value as unknown as number,
+									})
+								}
+							/>
+							<span className='sp-hint'>@userinfobot orqali topish mumkin</span>
 						</div>
-						<div className='sp-form-body'>
-							{/* Asosiy */}
-							<div className='sp-form-section-label'>Asosiy ma'lumotlar</div>
-							<div>
-								<label className='sp-label'>Telegram ID *</label>
+						<div className='sp-row2'>
+							<div className='sp-field'>
+								<label className='sp-label'>Ism *</label>
 								<input
-									className='sp-input sp'
-									type='number'
-									placeholder='123456789'
-									value={form.telegram_id || ''}
+									className='sp-inp'
+									placeholder='Alisher'
+									value={form.first_name}
 									onChange={e =>
-										setForm({
-											...form,
-											telegram_id: parseInt(e.target.value),
-										})
+										setForm({ ...form, first_name: e.target.value })
 									}
 								/>
-								<p className='sp-hint'>@userinfobot orqali topish mumkin</p>
 							</div>
-							<div className='sp-form-grid'>
-								<div>
-									<label className='sp-label'>Ism *</label>
-									<input
-										className='sp-input sp'
-										placeholder='Alisher'
-										value={form.first_name}
-										onChange={e =>
-											setForm({ ...form, first_name: e.target.value })
-										}
-									/>
-								</div>
-								<div>
-									<label className='sp-label'>Familiya *</label>
-									<input
-										className='sp-input sp'
-										placeholder='Navoiy'
-										value={form.last_name}
-										onChange={e =>
-											setForm({ ...form, last_name: e.target.value })
-										}
-									/>
-								</div>
+							<div className='sp-field'>
+								<label className='sp-label'>Familiya *</label>
+								<input
+									className='sp-inp'
+									placeholder='Navoiy'
+									value={form.last_name}
+									onChange={e =>
+										setForm({ ...form, last_name: e.target.value })
+									}
+								/>
 							</div>
-							<div className='sp-form-grid'>
-								<div>
-									<label className='sp-label'>Username</label>
-									<input
-										className='sp-input sp'
-										placeholder='@alisher_n'
-										value={form.username}
-										onChange={e =>
-											setForm({ ...form, username: e.target.value })
-										}
-									/>
-								</div>
-								<div>
-									<label className='sp-label'>Telefon</label>
-									<input
-										className='sp-input sp'
-										type='tel'
-										placeholder='+998 90 123 45 67'
-										value={form.phone}
-										onChange={e => setForm({ ...form, phone: e.target.value })}
-									/>
-								</div>
+						</div>
+						<div className='sp-row2'>
+							<div className='sp-field'>
+								<label className='sp-label'>Username</label>
+								<input
+									className='sp-inp'
+									placeholder='@username'
+									value={form.username}
+									onChange={e => setForm({ ...form, username: e.target.value })}
+								/>
 							</div>
+							<div className='sp-field'>
+								<label className='sp-label'>Telefon</label>
+								<input
+									className='sp-inp'
+									type='tel'
+									placeholder='+998 90...'
+									value={form.phone}
+									onChange={e => setForm({ ...form, phone: e.target.value })}
+								/>
+							</div>
+						</div>
 
-							{/* Guruh */}
-							<div className='sp-form-section-label'>Guruh</div>
-							<div>
-								<label className='sp-label'>Guruh tanlash</label>
-								<select
-									className='sp-input sp'
-									value={form.group_id || ''}
+						<p className='sp-form-sec'>Guruh & To'lov</p>
+						<div className='sp-field'>
+							<label className='sp-label'>Guruh</label>
+							<select
+								className='sp-inp'
+								value={form.group_id || ''}
+								onChange={e =>
+									setForm({
+										...form,
+										group_id: e.target.value
+											? Number(e.target.value)
+											: undefined,
+									})
+								}
+							>
+								<option value=''>Guruhsiz</option>
+								{groups.map(g => (
+									<option key={g.id} value={g.id}>
+										{g.name}
+									</option>
+								))}
+							</select>
+						</div>
+						<div className='sp-row2'>
+							<div className='sp-field'>
+								<label className='sp-label'>Oylik to'lov (so'm)</label>
+								<input
+									className='sp-inp'
+									type='number'
+									placeholder='500000'
+									value={form.monthly_fee || ''}
 									onChange={e =>
 										setForm({
 											...form,
-											group_id: e.target.value
+											monthly_fee: e.target.value
 												? Number(e.target.value)
 												: undefined,
 										})
 									}
-								>
-									<option value=''>Guruhsiz</option>
-									{groups.map(g => (
-										<option key={g.id} value={g.id}>
-											{g.name}
-										</option>
-									))}
-								</select>
+								/>
 							</div>
-
-							{/* Ota-ona */}
-							<div className='sp-form-section-label'>Ota-ona ma'lumotlari</div>
-							<div className='sp-form-grid'>
-								<div>
-									<label className='sp-label'>Ota-ona ismi</label>
-									<input
-										className='sp-input sp'
-										placeholder='Mirzo Navoiy'
-										value={form.parent_name}
-										onChange={e =>
-											setForm({ ...form, parent_name: e.target.value })
-										}
-									/>
-								</div>
-								<div>
-									<label className='sp-label'>Ota-ona telefoni</label>
-									<input
-										className='sp-input sp'
-										type='tel'
-										placeholder='+998 90 765 43 21'
-										value={form.parent_phone}
-										onChange={e =>
-											setForm({ ...form, parent_phone: e.target.value })
-										}
-									/>
-								</div>
-							</div>
-							<div>
-								<label className='sp-label'>Favqulodda aloqa</label>
+							<div className='sp-field'>
+								<label className='sp-label'>Chegirma %</label>
 								<input
-									className='sp-input sp'
-									type='tel'
-									placeholder='+998 ...'
-									value={form.emergency_contact}
+									className='sp-inp'
+									type='number'
+									placeholder='0'
+									min='0'
+									max='100'
+									value={form.discount_percent || ''}
 									onChange={e =>
-										setForm({ ...form, emergency_contact: e.target.value })
+										setForm({
+											...form,
+											discount_percent: Number(e.target.value),
+										})
 									}
 								/>
 							</div>
-
-							{/* To'lov */}
-							<div className='sp-form-section-label'>To'lov</div>
-							<div className='sp-form-grid'>
-								<div>
-									<label className='sp-label'>Oylik to'lov (so'm)</label>
-									<input
-										className='sp-input sp'
-										type='number'
-										placeholder='500000'
-										value={form.monthly_fee || ''}
-										onChange={e =>
-											setForm({
-												...form,
-												monthly_fee: e.target.value
-													? Number(e.target.value)
-													: undefined,
-											})
-										}
-									/>
-								</div>
-								<div>
-									<label className='sp-label'>Chegirma (%)</label>
-									<input
-										className='sp-input sp'
-										type='number'
-										placeholder='0'
-										min='0'
-										max='100'
-										value={form.discount_percent || ''}
-										onChange={e =>
-											setForm({
-												...form,
-												discount_percent: Number(e.target.value),
-											})
-										}
-									/>
-								</div>
-							</div>
-
-							{/* Qo'shimcha */}
-							<div className='sp-form-section-label'>Qo'shimcha</div>
-							<div>
-								<label className='sp-label'>Manzil</label>
-								<input
-									className='sp-input sp'
-									placeholder='Toshkent, Chilonzor...'
-									value={form.address}
-									onChange={e => setForm({ ...form, address: e.target.value })}
-								/>
-							</div>
-							<div>
-								<label className='sp-label'>Izoh</label>
-								<input
-									className='sp-input sp'
-									placeholder="Qo'shimcha ma'lumot..."
-									value={form.notes}
-									onChange={e => setForm({ ...form, notes: e.target.value })}
-								/>
-							</div>
-
-							<button
-								className='sp-submit-btn sp'
-								onClick={handleSubmit}
-								disabled={submitting}
-							>
-								{submitting ? 'Saqlanmoqda...' : "O'quvchi qo'shish"}
-							</button>
 						</div>
+
+						<p className='sp-form-sec'>Ota-ona</p>
+						<div className='sp-row2'>
+							<div className='sp-field'>
+								<label className='sp-label'>Ota-ona ismi</label>
+								<input
+									className='sp-inp'
+									placeholder='Mirzo Navoiy'
+									value={form.parent_name}
+									onChange={e =>
+										setForm({ ...form, parent_name: e.target.value })
+									}
+								/>
+							</div>
+							<div className='sp-field'>
+								<label className='sp-label'>Ota-ona tel</label>
+								<input
+									className='sp-inp'
+									type='tel'
+									placeholder='+998...'
+									value={form.parent_phone}
+									onChange={e =>
+										setForm({ ...form, parent_phone: e.target.value })
+									}
+								/>
+							</div>
+						</div>
+						<div className='sp-field'>
+							<label className='sp-label'>Manzil</label>
+							<input
+								className='sp-inp'
+								placeholder='Toshkent, ...'
+								value={form.address}
+								onChange={e => setForm({ ...form, address: e.target.value })}
+							/>
+						</div>
+						<div className='sp-field'>
+							<label className='sp-label'>Izoh</label>
+							<input
+								className='sp-inp'
+								placeholder="Qo'shimcha..."
+								value={form.notes}
+								onChange={e => setForm({ ...form, notes: e.target.value })}
+							/>
+						</div>
+						<button
+							className='sp-submit'
+							onClick={handleSubmit}
+							disabled={submitting}
+						>
+							{submitting ? '⏳ Saqlanmoqda...' : "✓ O'quvchi qo'shish"}
+						</button>
 					</div>
 				)}
 
-				{/* List */}
-				<div className='sp-list'>
+				{/* ── List ── */}
+				<main className='sp-list'>
 					{loading ? (
 						Array.from({ length: 5 }).map((_, i) => (
-							<div key={i} className='sp-skeleton'>
-								<div
-									className='sp-skel-inner'
-									style={{ animationDelay: `${i * 0.1}s` }}
-								/>
-							</div>
+							<div
+								key={i}
+								className='sp-skel'
+								style={{ animationDelay: `${i * 80}ms` }}
+							/>
 						))
 					) : students.length === 0 ? (
 						<div className='sp-empty'>
-							<div className='sp-empty-icon'>👨‍🎓</div>
-							<div className='sp-empty-title'>
-								{search || filterGroup || filterStatus
-									? 'Topilmadi'
-									: "O'quvchilar yo'q"}
-							</div>
-							<div className='sp-empty-sub'>
-								{search || filterGroup || filterStatus
-									? "Filter yoki qidiruvni o'zgartiring"
+							<div style={{ fontSize: 52 }}>👨‍🎓</div>
+							<p className='sp-empty-t'>
+								{search || fGroup || fStatus ? 'Topilmadi' : "O'quvchilar yo'q"}
+							</p>
+							<p className='sp-empty-s'>
+								{search || fGroup || fStatus
+									? "Filterni o'zgartiring"
 									: "Yangi o'quvchi qo'shing"}
-							</div>
+							</p>
 						</div>
 					) : (
 						students.map((s, i) => {
-							const group = groups.find(g => g.id === s.group_id)
-							console.log(
-								`=======Talaba id : ${s.id}============================`,
-							)
-							const enrollDays = s.enrollment_date
+							const grp = groups.find(g => g.id === s.group_id)
+							const days = s.enrollment_date
 								? Math.floor(
 										(Date.now() - new Date(s.enrollment_date).getTime()) /
 											86400000,
 									)
 								: 0
-
 							return (
 								<div
 									key={s.id}
-									className={`sp-card ${visibleCards.has(s.id) ? 'visible' : ''}`}
-									style={{ transitionDelay: `${i * 40}ms` }}
+									className={`sp-card${visible.has(s.id) ? ' sp-card--in' : ''}`}
+									style={{ transitionDelay: `${i * 42}ms` }}
+									onClick={() => {
+										haptic.light()
+										router.push(`/admin/students/${s.id}`)
+									}}
 								>
-									<Link
-										href={`/admin/students/${s.id}`}
-										className='sp-card-top'
-									>
-										{/* Avatar */}
+									<div className='sp-card-body'>
 										<div
 											className='sp-avatar'
-											style={{ background: avatarColor(s.id) }}
+											style={{ background: avatarGrad(s.id) }}
 										>
 											{getInitials(s.first_name, s.last_name)}
 										</div>
-
-										<div style={{ flex: 1, minWidth: 0 }}>
-											<div className='sp-card-name'>
+										<div className='sp-info'>
+											<p className='sp-name'>
 												{s.first_name} {s.last_name}
-											</div>
-											{s.student_id && (
-												<div className='sp-card-id'>{s.student_id}</div>
-											)}
-
-											<div className='sp-card-meta'>
-												{/* Status badge */}
+											</p>
+											{s.student_id && <p className='sp-sid'>{s.student_id}</p>}
+											<div className='sp-badges'>
 												<span
 													className='sp-badge'
 													style={{
-														background: `${statusColor[s.status]}22`,
-														color: statusColor[s.status],
+														color: STATUS_VAR[s.status],
+														background: `color-mix(in srgb,${STATUS_VAR[s.status]} 12%,transparent)`,
 													}}
 												>
-													● {statusLabel[s.status]}
+													● {STATUS_LABEL[s.status]}
 												</span>
-
-												{/* Payment badge */}
 												<span
 													className='sp-badge'
 													style={{
-														background: `${paymentColor[s.payment_status]}1a`,
-														color: paymentColor[s.payment_status],
+														color: PAY_VAR[s.payment_status],
+														background: `color-mix(in srgb,${PAY_VAR[s.payment_status]} 12%,transparent)`,
 													}}
 												>
-													💳 {paymentLabel[s.payment_status]}
+													💳 {PAY_LABEL[s.payment_status]}
 												</span>
-
-												{/* Group */}
-												{group && (
-													<span className='sp-tag group-tag'>
-														👥 {group.name}
+												{grp && (
+													<span className='sp-badge sp-badge--g'>
+														👥 {grp.name}
 													</span>
 												)}
 											</div>
-
-											<div
-												className='sp-card-extra'
-												style={{ padding: '8px 0 0' }}
-											>
-												{s.username && (
-													<span className='sp-info-chip'>@{s.username}</span>
-												)}
-												{s.phone && (
-													<span className='sp-info-chip'>📱 {s.phone}</span>
-												)}
-												{s.parent_name && (
-													<span className='sp-info-chip'>
-														👨‍👩‍👦 {s.parent_name}
-													</span>
-												)}
+											<div className='sp-meta'>
+												{s.username && <span>@{s.username}</span>}
+												{s.phone && <span>📱 {s.phone}</span>}
 												{s.monthly_fee && (
-													<span className='sp-info-chip'>
-														💰 {s.monthly_fee.toLocaleString()} so'm
+													<span>
+														💰 {s.monthly_fee.toLocaleString()}
 														{s.discount_percent
 															? ` (-${s.discount_percent}%)`
 															: ''}
 													</span>
 												)}
-												{s.debt_amount && s.debt_amount > 0 ? (
-													<span
-														className='sp-info-chip'
-														style={{ color: '#ff453a' }}
-													>
-														⚠️ Qarz: {s.debt_amount.toLocaleString()}
-													</span>
-												) : null}
-												{enrollDays > 0 && (
-													<span className='sp-info-chip'>
-														📅 {enrollDays} kun
+												{(s.debt_amount ?? 0) > 0 && (
+													<span className='sp-debt'>
+														⚠️ Qarz: {(s.debt_amount ?? 0).toLocaleString()}
 													</span>
 												)}
+												{days > 0 && <span>📅 {days} kun</span>}
 											</div>
 										</div>
-									</Link>
-
-									<div className='sp-card-footer'>
-										<Link
-											href={`/admin/students/1`}
-											className='sp-action-btn view-btn'
-										>
-											👁 Ko'rish
-										</Link>
+										<svg className='sp-chev' viewBox='0 0 8 14' fill='none'>
+											<path
+												d='M1 1l6 6-6 6'
+												stroke='currentColor'
+												strokeWidth='1.5'
+												strokeLinecap='round'
+												strokeLinejoin='round'
+											/>
+										</svg>
+									</div>
+									<div
+										className='sp-card-foot'
+										onClick={e => e.stopPropagation()}
+									>
 										<button
-											className='sp-action-btn del-btn'
-											onClick={() => handleDelete(s)}
+											className='sp-del'
+											onClick={e => handleDelete(s, e)}
 										>
 											🗑 O'chirish
 										</button>
@@ -911,40 +546,131 @@ export default function AdminStudentsPage() {
 							)
 						})
 					)}
-				</div>
+				</main>
 
-				{/* Pagination */}
 				{totalPages > 1 && (
-					<div className='sp-pagination'>
+					<nav className='sp-pager'>
 						<button
-							className='sp-page-btn'
-							onClick={() => changePage(page - 1)}
+							className='sp-pager-btn'
 							disabled={page === 1}
+							onClick={() => goPage(page - 1)}
 						>
 							‹
 						</button>
-						{Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
-							const p = i + 1
-							return (
-								<button
-									key={p}
-									className={`sp-page-btn ${p === page ? 'active' : ''}`}
-									onClick={() => changePage(p)}
-								>
-									{p}
-								</button>
-							)
-						})}
+						{Array.from(
+							{ length: Math.min(totalPages, 7) },
+							(_, i) => i + 1,
+						).map(p => (
+							<button
+								key={p}
+								className={`sp-pager-btn${p === page ? ' sp-pager-btn--on' : ''}`}
+								onClick={() => goPage(p)}
+							>
+								{p}
+							</button>
+						))}
 						<button
-							className='sp-page-btn'
-							onClick={() => changePage(page + 1)}
+							className='sp-pager-btn'
 							disabled={page === totalPages}
+							onClick={() => goPage(page + 1)}
 						>
 							›
 						</button>
-					</div>
+					</nav>
 				)}
 			</div>
 		</>
 	)
 }
+
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap');
+:root {
+  --tg-bg:          var(--tg-theme-bg-color,#fff);
+  --tg-secondary:   var(--tg-theme-secondary-bg-color,#f2f2f7);
+  --tg-text:        var(--tg-theme-text-color,#000);
+  --tg-hint:        var(--tg-theme-hint-color,#8e8e93);
+  --tg-link:        var(--tg-theme-link-color,#007aff);
+  --tg-button:      var(--tg-theme-button-color,#007aff);
+  --tg-btn-text:    var(--tg-theme-button-text-color,#fff);
+  --tg-destructive: var(--tg-theme-destructive-text-color,#ff3b30);
+  --tg-section:     var(--tg-theme-section-bg-color,#fff);
+  --tg-sep:         var(--tg-theme-section_separator_color,rgba(0,0,0,.08));
+  --tg-subtitle:    var(--tg-theme-subtitle-text-color,#6d6d72);
+  --tg-success: #30d158; --tg-warning: #ff9500;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+.sp{font-family:'Nunito',-apple-system,sans-serif;background:var(--tg-bg);color:var(--tg-text);min-height:100vh;display:flex;flex-direction:column;}
+
+/* header */
+.sp-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;background:var(--tg-section);border-bottom:1px solid var(--tg-sep);position:sticky;top:0;z-index:40;backdrop-filter:blur(14px);}
+.sp-title{font-size:22px;font-weight:900;letter-spacing:-.4px;}
+.sp-sub{font-size:12px;color:var(--tg-hint);margin-top:1px;}
+.sp-add-btn{padding:8px 18px;background:var(--tg-button);color:var(--tg-btn-text);border:none;border-radius:22px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;cursor:pointer;transition:all .18s;box-shadow:0 3px 10px color-mix(in srgb,var(--tg-button) 35%,transparent);}
+.sp-add-btn:active{transform:scale(.95);}
+.sp-add-btn--x{background:var(--tg-secondary);color:var(--tg-text);box-shadow:none;}
+
+/* filters */
+.sp-filters{padding:10px 12px;display:flex;flex-direction:column;gap:7px;background:var(--tg-section);border-bottom:1px solid var(--tg-sep);}
+.sp-search-wrap{position:relative;}
+.sp-search-ico{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none;}
+.sp-search{width:100%;padding:9px 12px 9px 32px;background:var(--tg-secondary);border:1.5px solid transparent;border-radius:12px;font-family:'Nunito',sans-serif;font-size:14px;color:var(--tg-text);outline:none;transition:border-color .2s;}
+.sp-search:focus{border-color:color-mix(in srgb,var(--tg-button) 50%,transparent);}
+.sp-chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;}
+.sp-chips::-webkit-scrollbar{display:none;}
+.sp-chip{flex-shrink:0;padding:7px 10px;background:var(--tg-secondary);border:1.5px solid transparent;border-radius:10px;font-family:'Nunito',sans-serif;font-size:13px;color:var(--tg-text);outline:none;cursor:pointer;transition:border-color .2s;}
+.sp-chip:focus{border-color:color-mix(in srgb,var(--tg-button) 50%,transparent);}
+
+/* form */
+.sp-form{margin:12px;background:var(--tg-section);border:1.5px solid var(--tg-sep);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:10px;animation:sDown .28s cubic-bezier(.16,1,.3,1);}
+@keyframes sDown{from{opacity:0;transform:translateY(-10px);}to{opacity:1;transform:translateY(0);}}
+.sp-form-sec{font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--tg-hint);}
+.sp-field{display:flex;flex-direction:column;}
+.sp-label{font-size:12px;font-weight:700;color:var(--tg-subtitle);margin-bottom:4px;}
+.sp-inp{width:100%;padding:10px 13px;background:var(--tg-secondary);border:1.5px solid transparent;border-radius:12px;font-family:'Nunito',sans-serif;font-size:14px;color:var(--tg-text);outline:none;transition:border-color .2s,background .2s;}
+.sp-inp:focus{border-color:color-mix(in srgb,var(--tg-button) 55%,transparent);}
+.sp-hint{font-size:11px;color:var(--tg-hint);margin-top:3px;}
+.sp-row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.sp-submit{width:100%;padding:13px;background:var(--tg-button);color:var(--tg-btn-text);border:none;border-radius:14px;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;cursor:pointer;margin-top:4px;transition:all .18s;box-shadow:0 4px 14px color-mix(in srgb,var(--tg-button) 38%,transparent);}
+.sp-submit:disabled{opacity:.55;cursor:not-allowed;}
+.sp-submit:not(:disabled):active{transform:scale(.98);}
+
+/* list */
+.sp-list{padding:12px;flex:1;}
+
+/* card */
+.sp-card{background:var(--tg-section);border:1.5px solid var(--tg-sep);border-radius:18px;margin-bottom:10px;overflow:hidden;cursor:pointer;opacity:0;transform:translateY(12px) scale(.99);transition:opacity .3s ease,transform .3s ease,border-color .2s,box-shadow .2s;}
+.sp-card--in{opacity:1;transform:translateY(0) scale(1);}
+.sp-card:hover{border-color:color-mix(in srgb,var(--tg-button) 30%,transparent);box-shadow:0 4px 18px rgba(0,0,0,.07);}
+.sp-card:active{transform:scale(.99);}
+.sp-card-body{padding:13px 12px 9px;display:flex;gap:11px;align-items:flex-start;}
+.sp-avatar{width:50px;height:50px;border-radius:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#fff;box-shadow:0 3px 10px rgba(0,0,0,.18);}
+.sp-info{flex:1;min-width:0;}
+.sp-name{font-size:16px;font-weight:800;line-height:1.2;}
+.sp-sid{font-size:11px;color:var(--tg-hint);margin-top:2px;}
+.sp-badges{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;}
+.sp-badge{padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;}
+.sp-badge--g{background:color-mix(in srgb,var(--tg-link) 12%,transparent);color:var(--tg-link);}
+.sp-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;font-size:12px;color:var(--tg-subtitle);}
+.sp-debt{color:var(--tg-destructive)!important;font-weight:700;}
+.sp-chev{width:8px;height:14px;color:var(--tg-hint);flex-shrink:0;margin-top:5px;}
+.sp-card-foot{padding:7px 12px 11px;display:flex;gap:8px;border-top:1px solid var(--tg-sep);}
+.sp-del{flex:1;padding:8px;background:color-mix(in srgb,var(--tg-destructive) 10%,transparent);color:var(--tg-destructive);border:none;border-radius:11px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;}
+.sp-del:active{transform:scale(.96);}
+
+/* skeleton */
+.sp-skel{height:130px;border-radius:18px;margin-bottom:10px;background:linear-gradient(90deg,color-mix(in srgb,var(--tg-hint) 7%,transparent) 0%,color-mix(in srgb,var(--tg-hint) 13%,transparent) 50%,color-mix(in srgb,var(--tg-hint) 7%,transparent) 100%);background-size:200% 100%;animation:shimmer 1.4s infinite;}
+@keyframes shimmer{to{background-position:-200% 0;}}
+
+/* empty */
+.sp-empty{text-align:center;padding:56px 24px;}
+.sp-empty-t{font-size:18px;font-weight:800;margin-top:10px;}
+.sp-empty-s{font-size:13px;color:var(--tg-hint);margin-top:5px;}
+
+/* pagination */
+.sp-pager{display:flex;justify-content:center;gap:6px;padding:8px 12px 24px;}
+.sp-pager-btn{min-width:36px;height:36px;padding:0 10px;background:var(--tg-secondary);border:1.5px solid var(--tg-sep);border-radius:10px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;color:var(--tg-text);cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;}
+.sp-pager-btn:hover{border-color:color-mix(in srgb,var(--tg-button) 50%,transparent);color:var(--tg-button);}
+.sp-pager-btn--on{background:var(--tg-button);color:var(--tg-btn-text);border-color:transparent;box-shadow:0 3px 10px color-mix(in srgb,var(--tg-button) 38%,transparent);}
+.sp-pager-btn:disabled{opacity:.35;cursor:not-allowed;}
+`
