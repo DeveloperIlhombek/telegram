@@ -81,8 +81,8 @@ export default function StudentDetailPage() {
 	const router = useRouter()
 	const params = useParams()
 	const id = Array.isArray(params.id) ? params.id[0] : params.id
-	const studentId = id ? parseInt(id, 10) : NaN
-
+	// const studentId = id ? parseInt(id, 10) : NaN
+	const studentId = id && !isNaN(Number(id)) ? Number(id) : 1
 	const [student, setStudent] = useState<Student | null>(null)
 	const [attendance, setAttendance] = useState<AttendanceRecord[]>([])
 	const [groups, setGroups] = useState<Group[]>([])
@@ -97,7 +97,16 @@ export default function StudentDetailPage() {
 		absent: 0,
 		late: 0,
 	})
-
+	// =====================================================================
+	useEffect(() => {
+		if (isNaN(studentId) || studentId <= 0) {
+			console.warn('Noto‘g‘ri studentId:', studentId)
+			return
+		}
+		loadAll()
+		setTimeout(() => setMounted(true), 50)
+	}, [studentId])
+	// =====================================================================
 	useEffect(() => {
 		loadAll()
 		setTimeout(() => setMounted(true), 50)
