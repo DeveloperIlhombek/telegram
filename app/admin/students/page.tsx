@@ -786,6 +786,9 @@ export default function AdminStudentsPage() {
 					) : (
 						students.map((s, i) => {
 							const group = groups.find(g => g.id === s.group_id)
+							console.log(
+								`=======Talaba id : ${s.id}============================`,
+							)
 							const enrollDays = s.enrollment_date
 								? Math.floor(
 										(Date.now() - new Date(s.enrollment_date).getTime()) /
@@ -892,7 +895,7 @@ export default function AdminStudentsPage() {
 
 									<div className='sp-card-footer'>
 										<Link
-											href={`/admin/students/${s.id}`}
+											href={`/admin/students/1`}
 											className='sp-action-btn view-btn'
 										>
 											👁 Ko'rish
