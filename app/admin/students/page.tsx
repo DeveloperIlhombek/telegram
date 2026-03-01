@@ -462,7 +462,7 @@ export default function AdminStudentsPage() {
 									style={{ transitionDelay: `${i * 42}ms` }}
 									onClick={() => {
 										haptic.light()
-										router.push(`/admin/students/${s.id}`)
+										router.push(`/admin/students/${Number(s.id)}`)
 									}}
 								>
 									<div className='sp-card-body'>
