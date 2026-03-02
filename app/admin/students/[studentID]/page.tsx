@@ -132,7 +132,7 @@ export default function StudentDetailPage() {
 		setLoading(true)
 		try {
 			const [sRes, gRes, attRes] = await Promise.all([
-				adminApi.getStudent(path),
+				adminApi.getStudent(1),
 				adminApi.getGroups(1, 100),
 				adminApi
 					.getStudentAttendance(studentId)
