@@ -468,7 +468,7 @@ export default function AdminStudentsPage() {
 								>
 									<button>
 										<Link href={`/admin/students/${s.id}`}>
-											Student ID ga o'tish
+											Student ID ga o'tish {s.id} va {typeof s.id}
 										</Link>
 									</button>
 									<div className='sp-card-body'>
